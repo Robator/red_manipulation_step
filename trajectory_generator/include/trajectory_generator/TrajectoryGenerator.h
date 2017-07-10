@@ -38,7 +38,6 @@ class TrajectoryGenerator {
         double maxVelocity;
         double maxAcceleration;
         double timeStep;
-
 };
 
 #endif 

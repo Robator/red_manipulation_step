@@ -8,13 +8,13 @@ int main(int argc, char const *argv[])
     std::vector<JointValues> sol;
     ArmKinematics solver;
     Vector3d zeros, smoothPos;
-    double alpha = 3.1415;
+    double alpha = -3.1415;
 
     // Main trajectory params
     double maxAcc = 0.05, maxVel = 0.05, timeStep = 0.01;
 
-    startPose.position(0) = 0.4;
-    startPose.position(2) = -0.1;
+    startPose.position(0) = -0.3;
+    startPose.position(2) = 0.1;
     startPose.orientation(2) = alpha;
     if (!solver.solveFullyIK(startPose, angles)) {
         ROS_ERROR_STREAM("Solution start pose not found!");
@@ -22,7 +22,8 @@ int main(int argc, char const *argv[])
     }
 
     endPose = startPose;
-    endPose.position(2) = -0.15;
+    endPose.position(2) = 0.0;
+    endPose.orientation(2) = alpha;
     if (!solver.solveFullyIK(endPose, angles)) {
         ROS_ERROR_STREAM("Solution end pose not found!");
         return 1;
@@ -34,7 +35,7 @@ int main(int argc, char const *argv[])
     traj.convertWorkSpaceToJointSpace(startPose, endPose, timeStep);
 
     std::ofstream logFile;
-    std::string logDirPath = "/home/senserlex/youbot_ws/src/red_manipulation_step/trajectory_generator/";
+    std::string logDirPath = "/home/senex/youbot_ws/src/red_manipulation_step/trajectory_generator/";
     std::stringstream filename;
     filename << logDirPath << "logs/JointSpaceTraj" << ".log";
     std::string file = filename.str();
