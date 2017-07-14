@@ -62,10 +62,10 @@ void Trajectory::calculateWorkSpaceTrajectory(const double maxVel, const double 
     posTra.push_back(endPose.position);
     time.push_back(currentTime);
 }
-void Trajectory::convertWorkSpaceToJointSpace(const Pose & startPose, const Pose & endPose, const double timeStep)
+void Trajectory::convertWorkSpaceToJointSpace(Pose startPose, Pose endPose, const double timeStep)
 {
     JointValues currJntAng, currJntAngVel, currJntAngAcc;
-    JointValues prevAngles, currAngles, nextAngles;
+    JointValues prevAngles, currAngles, nextAngles, anglesDiff;
     ArmKinematics solver;
     double prevTime, currTime, nextTime;
     bool err = false;
@@ -87,11 +87,18 @@ void Trajectory::convertWorkSpaceToJointSpace(const Pose & startPose, const Pose
             continue;
         }
 
+        endPose.orientation(2) = startAlpha;
         if (solver.solveIK(endPose, currJntAng, configuration)) 
             endAlpha = currJntAng(1) + currJntAng(2) + currJntAng(3);
         else {
             ROS_WARN_STREAM("Solution for end position with configuration: " << configuration << " is not found");
             continue;
+        }
+
+        if (startAlpha != endAlpha) {
+            startPose.orientation(2) = endAlpha;
+            solver.solveIK(startPose, currJntAng, configuration);
+            startAlpha = currJntAng(1) + currJntAng(2) + currJntAng(3);
         }
 
         startRot(2) = startAlpha;
@@ -104,21 +111,25 @@ void Trajectory::convertWorkSpaceToJointSpace(const Pose & startPose, const Pose
             currRot += rotVel;
         }
 
-        std::vector<Vector3d>::iterator posIT = posTra.begin();
-        //std::vector<Vector3d>::iterator velIT = velTra.begin();
-        std::vector<Vector3d>::iterator rotIT = rotTra.begin();
-
-        for (posIT; posIT != posTra.end(); ++posIT, ++rotIT) {
-            if (!solver.solveIK(*posIT, *rotIT, currJntAng, configuration)) {
+        for (size_t i = 0; i < posTra.size(); ++i) {
+            if (!solver.solveIK(posTra[i], rotTra[i], currJntAng, configuration)) {
                 ROS_WARN_STREAM("Solution is not found at configuration: " << configuration);
-                err = true; 
+                err = true;
                 break;
             }
             makeYoubotArmOffsets(currJntAng);
 
+            anglesDiff = currJntAng - prevAngles;
+            if (i > 0 && anglesDiff(1) > 0.03) {
+                for (size_t j = 0; j <= i - 1; ++j) {
+                    qTra[j] += anglesDiff;
+                }
+            }
+            
             qTra.push_back(currJntAng);
+            prevAngles = currJntAng;
         }
-
+        ROS_INFO_STREAM("LOL");
         if (err == true) continue;
 
         std::vector<JointValues>::iterator pp = qTra.begin() - 1;

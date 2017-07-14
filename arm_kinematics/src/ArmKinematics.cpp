@@ -46,14 +46,14 @@ bool ArmKinematics::solvePlaneIK(Vector3d position, const double alpha, JointVal
     double cosPhi3;
     bool valid = true;
 
+    position(0) -= (d4 + griperLength)*sin(alpha);
+    position(2) -= (d4 + griperLength)*cos(alpha);
+
     // Check length of setting goal
-    if (sqrt(position(0)*position(0) + position(2)*position(2)) > d2 + d3 + d4) {
-        ROS_FATAL_STREAM("Solution NOT exists!!");
+    if (sqrt(position(0)*position(0) + position(2)*position(2)) > d2 + d3) {
+        // ROS_FATAL_STREAM("Solution NOT exists!!");
         return false;
     }
-
-    position(0) -= d4*sin(alpha);
-    position(2) -= d4*cos(alpha);
 
     cosPhi3 = (position(0)*position(0) + position(2)*position(2) - d2*d2 - d3*d3)/(2*d2*d3);
     if (cosPhi3 > 1) jointAngles(2) = 0;
@@ -210,8 +210,9 @@ Vector3d ArmKinematics::transformFromFrame5ToFrame0(const JointValues & jointAng
     double phi5 = jointAngles(4);
 
     // xz-plane shift
-    double dx = d2*sin(jointAngles(1)) + d3*sin(jointAngles(1) + jointAngles(2)) + (d4 - 0.105)*sin(alpha) + d1x;
-    double dz = d2*cos(jointAngles(1)) + d3*cos(jointAngles(1) + jointAngles(2)) + (d4 - 0.105)*cos(alpha) + d1z;
+    double dx = d2*sin(jointAngles(1)) + d3*sin(jointAngles(1) + jointAngles(2)) + (d4 + griperLength)*sin(alpha) + d1x;
+    double dz = d2*cos(jointAngles(1)) + d3*cos(jointAngles(1) + jointAngles(2)) + (d4 + griperLength)*cos(alpha) + d1z;
+
 
     // x-coordinate
     resultPosition(0) = (cos(alpha)*cos(phi1)*cos(phi5) - sin(phi1)*sin(phi5)) * position(0)
@@ -228,11 +229,6 @@ Vector3d ArmKinematics::transformFromFrame5ToFrame0(const JointValues & jointAng
                         + (sin(alpha)*sin(phi5)) * position(1)
                         + (cos(alpha)) * position(2)
                         + dz + d0z;
-
-    ROS_INFO_STREAM("Position: (" << 
-                resultPosition(0) << ", " <<
-                resultPosition(1) << ", " <<
-                resultPosition(2) << ")");
 
     return resultPosition;
 }
